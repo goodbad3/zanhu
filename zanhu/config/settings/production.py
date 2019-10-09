@@ -12,14 +12,14 @@ ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['example.com'])
 # ------------------------------------------------------------------------------
 DATABASES['default'] = env.db('DATABASE_URL')  # noqa F405
 DATABASES['default']['ATOMIC_REQUESTS'] = True  # noqa F405
-DATABASES['default']['CONN_MAX_AGE'] = env.int('CONN_MAX_AGE', default=60)  # noqa F405
+DATABASES['default']['CONN_MAX_AGE'] = env.int('CONN_MAX_AGE', default=300)  # noqa F405
 
 # CACHES
 # ------------------------------------------------------------------------------
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': env('REDIS_URL'),
+        'LOCATION': f'{env("REDIS_URL", default="redis://127.0.0.1:6379")}/0',  # 网站缓存使用Redis 0
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             # Mimicing memcache behavior.
@@ -36,9 +36,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-ssl-redirect
 SECURE_SSL_REDIRECT = env.bool('DJANGO_SECURE_SSL_REDIRECT', default=True)
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-secure
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-secure
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
 # https://docs.djangoproject.com/en/dev/topics/security/#ssl-https
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-hsts-seconds
 # TODO: set this to 60 seconds first and then to 518400 once you prove the former works
@@ -63,24 +63,12 @@ TEMPLATES[0]['OPTIONS']['loaders'] = [  # noqa F405
     ),
 ]
 
-# Gunicorn
-# ------------------------------------------------------------------------------
-INSTALLED_APPS += ['gunicorn']  # noqa F405
-
 # django-compressor
 # ------------------------------------------------------------------------------
 # https://django-compressor.readthedocs.io/en/latest/settings/#django.conf.settings.COMPRESS_ENABLED
 COMPRESS_ENABLED = env.bool('COMPRESS_ENABLED', default=True)
-# https://django-compressor.readthedocs.io/en/latest/settings/#django.conf.settings.COMPRESS_STORAGE
-COMPRESS_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 # https://django-compressor.readthedocs.io/en/latest/settings/#django.conf.settings.COMPRESS_URL
 COMPRESS_URL = STATIC_URL
-
-# Collectfast
-# ------------------------------------------------------------------------------
-# https://github.com/antonagestam/collectfast#installation
-INSTALLED_APPS = ['collectfast'] + INSTALLED_APPS  # noqa F405
-AWS_PRELOAD_METADATA = True
 
 # LOGGING
 # ------------------------------------------------------------------------------

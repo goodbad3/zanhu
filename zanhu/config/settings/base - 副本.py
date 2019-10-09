@@ -5,7 +5,7 @@ Base settings to build other settings files upon.
 import environ
 
 ROOT_DIR = environ.Path(__file__) - 3  # (zanhu/config/settings/base.py - 3 = zanhu/)
-APPS_DIR = ROOT_DIR.path('zanhu')
+APPS_DIR = ROOT_DIR.path('zanhu')  # media, static, staticfiles的文件路径
 
 env = environ.Env()
 
@@ -28,9 +28,9 @@ LANGUAGE_CODE = 'zh-Hans'
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 SITE_ID = 1
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
-USE_I18N = True
+USE_I18N = True  # 开启国际化支持
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-l10n
-USE_L10N = True
+USE_L10N = True  # 使用当前语言环境的格式显示数字和日期
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-tz
 USE_TZ = True
 
@@ -39,17 +39,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db('DATABASE_URL', default='mysql://social'),
+    'default': env.db('DATABASE_URL', default='mysql://zanhu'),
 }
 # https://docs.djangoproject.com/en/dev/topics/db/transactions/
-DATABASES['default']['ATOMIC_REQUESTS'] = True  # 将HTTP请求封装到事务
+DATABASES['default']['ATOMIC_REQUESTS'] = True  # 将HTTP请求中对数据库的操作封装成事务
 
 # URLS
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#root-urlconf
 ROOT_URLCONF = 'config.urls'
-# https://docs.djangoproject.com/en/dev/ref/settings/#wsgi-application
-WSGI_APPLICATION = 'config.wsgi.application'
 
 # APPS
 # ------------------------------------------------------------------------------
@@ -60,21 +58,36 @@ DJANGO_APPS = [
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # 更友好的模板标签
+    'django.forms',  # 放在此列表的最后！用户后面重写django内置widget的模板
 ]
 THIRD_PARTY_APPS = [
+    'channels',
     'crispy_forms',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'rest_framework',
+    'allauth.socialaccount.providers.github',
+    'sorl.thumbnail',
+    'taggit',
+    'markdownx',
+    'django_comments',
+    'haystack',
+    'djcelery_email'
 ]
 LOCAL_APPS = [
-    'zanhu.users.apps.UsersAppConfig',
+    'zanhu.users.apps.UsersConfig',
     # Your stuff: custom apps go here
+    'zanhu.news.apps.NewsConfig',
+    'zanhu.articles.apps.ArticlesConfig',
+    'zanhu.qa.apps.QaConfig',
+    'zanhu.messager.apps.MessagerConfig',
+    'zanhu.notifications.apps.NotificationsConfig',
+    'zanhu.search.apps.SearchConfig',
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 # MIGRATIONS
 # ------------------------------------------------------------------------------
@@ -87,15 +100,16 @@ MIGRATION_MODULES = {
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#authentication-backends
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+    'django.contrib.auth.backends.ModelBackend',  # django默认的认证
+    'allauth.account.auth_backends.AuthenticationBackend',  # django-allauth的认证
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = 'users.User'
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
-LOGIN_REDIRECT_URL = 'users:redirect'
+LOGIN_REDIRECT_URL = 'news:list'  # 登录跳转配置
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
 LOGIN_URL = 'account_login'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 
 # PASSWORDS
 # ------------------------------------------------------------------------------
@@ -140,12 +154,12 @@ MIDDLEWARE = [
 # STATIC
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-root
-STATIC_ROOT = str(ROOT_DIR('staticfiles'))
+STATIC_ROOT = str(APPS_DIR('static'))  # 执行collectstatic命令后会将项目中的静态文件收集到该目录下面来
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
-STATIC_URL = '/static/'
+STATIC_URL = '/static/'  # 指定静态目录的URL
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
-STATICFILES_DIRS = [
-    str(APPS_DIR.path('static')),
+STATICFILES_DIRS = [  # 引用位于STATIC_ROOT中的静态文件时使用的网址
+    str(APPS_DIR.path('staticfiles')),
 ]
 # https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
 STATICFILES_FINDERS = [
@@ -156,7 +170,7 @@ STATICFILES_FINDERS = [
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
-MEDIA_ROOT = str(APPS_DIR('media'))
+MEDIA_ROOT = str(APPS_DIR('media'))  # 在Windows开发环境下加上.replace("\\", "/")
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = '/media/'
 
@@ -209,7 +223,7 @@ FIXTURE_DIRS = (
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-httponly
 SESSION_COOKIE_HTTPONLY = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-httponly
-CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False  # 默认为False, 如果设置为True, JS将不能获取到CSRF cookie
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-browser-xss-filter
 SECURE_BROWSER_XSS_FILTER = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#x-frame-options
@@ -255,11 +269,11 @@ CELERYD_TASK_SOFT_TIME_LIMIT = 60  # 任务的软时间限制，超时候SoftTim
 # ------------------------------------------------------------------------------
 ACCOUNT_ALLOW_REGISTRATION = env.bool('DJANGO_ACCOUNT_ALLOW_REGISTRATION', True)
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_AUTHENTICATION_METHOD = 'username'  # email/username_email
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 ACCOUNT_EMAIL_REQUIRED = True
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # none , optional
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 ACCOUNT_ADAPTER = 'zanhu.users.adapters.AccountAdapter'
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
@@ -272,3 +286,35 @@ INSTALLED_APPS += ['compressor']
 STATICFILES_FINDERS += ['compressor.finders.CompressorFinder']
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# markdown上传图片大小限制
+MARKDOWNX_UPLOAD_MAX_SIZE = 50 * 1024 * 1024  # 允许上传的最大图片大小为5MB
+MARKDOWNX_IMAGE_MAX_SIZE = {'size': (1000, 1000), 'quality': 100}  # 图片大小为1000*1000，不压缩
+
+# ASGI server setup
+ASGI_APPLICATION = 'config.routing.application'
+
+# 频道层的缓存
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f'{env("REDIS_URL", default="redis://127.0.0.1:6379")}/3', ],  # channel layers缓存使用Redis 3
+        },
+    },
+}
+
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        # 使用的Elasticsearch搜索引擎
+        'ENGINE': 'haystack.backends.elasticsearch2_backend.Elasticsearch2SearchEngine',
+        # Elasticsearch连接的地址
+        'URL': 'http://127.0.0.1:9200/',
+        # 默认的索引名
+        'INDEX_NAME': 'zanhu',
+    }
+}
+
+HAYSTACK_SEARCH_RESULTS_PER_PAGE = 20  # 分页
+# 实时信号量处理器，模型类中数据增加、更新、删除时自动更新索引
+HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
